@@ -29,7 +29,7 @@ const config = defineConfig({
 							to: "/rule/elysia"
 						}]
 					}, {
-						title: "牛邮裹",
+						title: "牛邮裹文档",
 						items: [{
 							title: "user应用",
 							to: "/6ugo/users"
