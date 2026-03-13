@@ -16,7 +16,7 @@ const config = {
 		},
 		paths: {
 			// 当我们在本地开发时路径是根目录，打包发布时路径改成你的仓库名
-			base: process.argv.includes('dev') ? '' : '/'
+			base: process.argv.includes('dev') ? '' : '/kumare-doc'
 		}
 	},
 

@@ -9,7 +9,7 @@ actions:
     external: false
   - label: 开始了解
     type: secondary
-    to: /rule
+    to: {process.argv.includes('dev') ? '/rule' : '/kumare-doc/rule'}
     external: true
 features:
   - title: Version
