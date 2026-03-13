@@ -15,6 +15,9 @@ const config = {
 			handleMissingId: "warn"
 		}
 	},
+	paths: {
+		base: process.argv.includes('dev') ? '' : '/kumare-doc'
+	}
 }
 
 export default config
