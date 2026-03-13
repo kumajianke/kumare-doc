@@ -19,7 +19,6 @@
 ## Controller
 
 ### getCardByKeyViaCacheController
-
 :::success[tips]
 通过卡牌 Key 查询卡牌信息，优先走 Redis 缓存，缓存未命中时查询数据库并回填缓存（缓存有效期 3600 秒）。
 :::
