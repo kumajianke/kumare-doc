@@ -12,13 +12,14 @@
 | [addCardResposity](#addcardrsposity) | 批量插入卡牌记录 |
 | [getCardByKeyResposity](#getcardbykeyresposity) | 通过 Key 直接查询数据库（无缓存） |
 | [usedCardUpdateCardUsedResposity](#usedcardupdatecardusedresposity) | 将卡牌状态标记为已使用 |
-| [addCardHistoryResposity](#addcardhistoryresposity) | 写入卡牌消费历史记录|
+| [addCardHistoryResposity](#addcardhistoryresposity) | 写入卡牌消费历史记录 |
 
 ---
 
 ## Controller
 
 ### getCardByKeyViaCacheController
+
 :::success[tips]
 通过卡牌 Key 查询卡牌信息，优先走 Redis 缓存，缓存未命中时查询数据库并回填缓存（缓存有效期 3600 秒）。
 :::
