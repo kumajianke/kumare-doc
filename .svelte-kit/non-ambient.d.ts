@@ -27,7 +27,7 @@ export {};
 
 declare module "$app/types" {
 	export interface AppTypes {
-		RouteId(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note" | "/6ugo/note/lock" | "/6ugo/users" | "/rule" | "/rule/elysia";
+		RouteId(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note" | "/6ugo/note/lock" | "/6ugo/note/sklearn" | "/6ugo/note/sklearn/KNN" | "/6ugo/users" | "/rule" | "/rule/elysia";
 		RouteParams(): {
 			
 		};
@@ -39,11 +39,13 @@ declare module "$app/types" {
 			"/6ugo/community": Record<string, never>;
 			"/6ugo/note": Record<string, never>;
 			"/6ugo/note/lock": Record<string, never>;
+			"/6ugo/note/sklearn": Record<string, never>;
+			"/6ugo/note/sklearn/KNN": Record<string, never>;
 			"/6ugo/users": Record<string, never>;
 			"/rule": Record<string, never>;
 			"/rule/elysia": Record<string, never>
 		};
-		Pathname(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note/lock" | "/6ugo/users" | "/rule" | "/rule/elysia";
+		Pathname(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note/lock" | "/6ugo/note/sklearn" | "/6ugo/note/sklearn/KNN" | "/6ugo/users" | "/rule" | "/rule/elysia";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/sveltepress.svg" | "/sveltepress@3x.png" | string & {};
 	}

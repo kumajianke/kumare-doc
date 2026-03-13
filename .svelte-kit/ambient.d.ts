@@ -146,7 +146,6 @@ declare module '$env/static/private' {
 	export const XKB_DEFAULT_OPTIONS: string;
 	export const npm_node_execpath: string;
 	export const LC_NUMERIC: string;
-	export const OLDPWD: string;
 	export const TERM_PROGRAM: string;
 	export const NODE_ENV: string;
 	export const VIPSHOME: string;
@@ -344,7 +343,6 @@ declare module '$env/dynamic/private' {
 		XKB_DEFAULT_OPTIONS: string;
 		npm_node_execpath: string;
 		LC_NUMERIC: string;
-		OLDPWD: string;
 		TERM_PROGRAM: string;
 		NODE_ENV: string;
 		VIPSHOME: string;

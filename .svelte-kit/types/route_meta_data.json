@@ -18,6 +18,12 @@
 	"/6ugo/note/lock": [
 		"src/routes/+layout.ts"
 	],
+	"/6ugo/note/sklearn": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/note/sklearn/KNN": [
+		"src/routes/+layout.ts"
+	],
 	"/6ugo/users": [
 		"src/routes/+layout.ts"
 	],

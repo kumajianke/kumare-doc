@@ -49,6 +49,15 @@ const config = defineConfig({
 							title: "锁",
 							to: "/6ugo/note/lock"
 						}]
+					}, {
+						title: "笔记",
+						items: [{
+							title: "快速学习",
+							items: [{
+								title: "KNN",
+								to: "/6ugo/note/sklearn/KNN"
+							}]
+						}]
 					}]
 				},
 				github: 'https://github.com/Blackman99/sveltepress',
