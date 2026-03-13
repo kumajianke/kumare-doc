@@ -46,7 +46,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 4. 修改：只上传打包编译后生成的文件夹（通常是 build）
           path: 'dist/'
 
       - name: Deploy to GitHub Pages
