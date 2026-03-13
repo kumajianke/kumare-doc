@@ -1,0 +1,30 @@
+{
+	"/": [
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/6ugo": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/admin": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/card": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/community": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/note/lock": [
+		"src/routes/+layout.ts"
+	],
+	"/6ugo/users": [
+		"src/routes/+layout.ts"
+	],
+	"/rule": [
+		"src/routes/+layout.ts"
+	],
+	"/rule/elysia": [
+		"src/routes/+layout.ts"
+	]
+}
