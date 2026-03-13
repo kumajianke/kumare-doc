@@ -12,7 +12,7 @@
 | [addCardResposity](#addcardrsposity) | 批量插入卡牌记录 |
 | [getCardByKeyResposity](#getcardbykeyresposity) | 通过 Key 直接查询数据库（无缓存） |
 | [usedCardUpdateCardUsedResposity](#usedcardupdatecardusedresposity) | 将卡牌状态标记为已使用 |
-| [addCardHistoryResposity](#addcardhistoryresposity) | 写入卡牌消费历史记录 |
+| [addCardHistoryResposity](#addcardhistoryresposity) | 写入卡牌消费历史记录|
 
 ---
 
