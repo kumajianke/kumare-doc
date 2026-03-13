@@ -1,0 +1,54 @@
+# SveltePress 部署脚本
+name: Deploy SveltePress to Pages
+
+on:
+  push:
+    branches: ["main"] # 如果你的主分支叫 master，请改成 master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 1. 增加：配置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20 # 推荐使用较新的 Node 版本
+          cache: 'npm'     # 如果你用 pnpm 或 yarn，请修改这里
+
+      # 2. 增加：安装依赖
+      - name: Install dependencies
+        run: npm ci        # 或者用 npm install, pnpm install
+
+      # 3. 增加：执行 SveltePress 打包
+      - name: Build project
+        run: npm run build # 或者用 pnpm build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # 4. 修改：只上传打包编译后生成的文件夹（通常是 build）
+          path: 'dist/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
