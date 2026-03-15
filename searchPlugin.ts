@@ -21,7 +21,6 @@ export function searchIndexPlugin(): Plugin {
                     req.on('end', () => {
                         try {
                             const data = JSON.parse(body);
-                            // Simple password check (e.g. "admin123")
                             if (data.password === 'liuboyuan') {
                                 generateSearchIndex();
                                 res.statusCode = 200;

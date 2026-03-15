@@ -741,8 +741,7 @@ function GlobalLayout($$renderer, $$props) {
 }
 function SearchBox($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
-    let searchQuery = "";
-    $$renderer2.push(`<div class="search-container svelte-d4uu4c"><div class="search-bar svelte-d4uu4c"><input type="text"${attr("value", searchQuery)} placeholder="搜索文档..." class="search-input svelte-d4uu4c"/> <button class="update-btn svelte-d4uu4c" title="更新搜索索引">↻</button></div> `);
+    $$renderer2.push(`<div class="search-trigger svelte-d4uu4c"><span class="search-icon">🔍</span> <span class="search-placeholder">搜索</span> <span class="search-key svelte-d4uu4c">Ctrl K</span></div> `);
     {
       $$renderer2.push("<!--[-1-->");
     }
@@ -750,7 +749,7 @@ function SearchBox($$renderer, $$props) {
     {
       $$renderer2.push("<!--[-1-->");
     }
-    $$renderer2.push(`<!--]--></div>`);
+    $$renderer2.push(`<!--]-->`);
   });
 }
 function _layout($$renderer, $$props) {
