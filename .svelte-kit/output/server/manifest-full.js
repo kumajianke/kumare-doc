@@ -6,11 +6,11 @@ function __memo(fn) {
 
 return {
 	appDir: "_app",
-	appPath: "_app",
-	assets: new Set(["sveltepress.svg","sveltepress@3x.png"]),
-	mimeTypes: {".svg":"image/svg+xml",".png":"image/png"},
+	appPath: "kumare-doc/_app",
+	assets: new Set(["search.json","sveltepress.svg","sveltepress@3x.png"]),
+	mimeTypes: {".json":"application/json",".svg":"image/svg+xml",".png":"image/png"},
 	_: {
-		client: {start:"_app/immutable/entry/start.Cq1u-Fuw.js",app:"_app/immutable/entry/app.DjwZxzR1.js",imports:["_app/immutable/entry/start.Cq1u-Fuw.js","_app/immutable/chunks/DX4foA5W.js","_app/immutable/chunks/C1L0hoeX.js","_app/immutable/entry/app.DjwZxzR1.js","_app/immutable/chunks/PPVm8Dsz.js","_app/immutable/chunks/C1L0hoeX.js","_app/immutable/chunks/DsnmJJEf.js","_app/immutable/chunks/CuAbifRY.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
+		client: {start:"_app/immutable/entry/start.BV9TePJH.js",app:"_app/immutable/entry/app.DRx-9eUb.js",imports:["_app/immutable/entry/start.BV9TePJH.js","_app/immutable/chunks/Cz6VWaJK.js","_app/immutable/chunks/D0LP9oYd.js","_app/immutable/entry/app.DRx-9eUb.js","_app/immutable/chunks/PPVm8Dsz.js","_app/immutable/chunks/D0LP9oYd.js","_app/immutable/chunks/DsnmJJEf.js","_app/immutable/chunks/NS4aRjWX.js"],stylesheets:[],fonts:[],uses_env_dynamic_public:false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),
@@ -22,7 +22,9 @@ return {
 			__memo(() => import('./nodes/7.js')),
 			__memo(() => import('./nodes/8.js')),
 			__memo(() => import('./nodes/9.js')),
-			__memo(() => import('./nodes/10.js'))
+			__memo(() => import('./nodes/10.js')),
+			__memo(() => import('./nodes/11.js')),
+			__memo(() => import('./nodes/12.js'))
 		],
 		remotes: {
 			
@@ -71,24 +73,38 @@ return {
 				endpoint: null
 			},
 			{
+				id: "/6ugo/note/sklearn",
+				pattern: /^\/6ugo\/note\/sklearn\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 8 },
+				endpoint: null
+			},
+			{
+				id: "/6ugo/note/sklearn/KNN",
+				pattern: /^\/6ugo\/note\/sklearn\/KNN\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 9 },
+				endpoint: null
+			},
+			{
 				id: "/6ugo/users",
 				pattern: /^\/6ugo\/users\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 8 },
+				page: { layouts: [0,], errors: [1,], leaf: 10 },
 				endpoint: null
 			},
 			{
 				id: "/rule",
 				pattern: /^\/rule\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 9 },
+				page: { layouts: [0,], errors: [1,], leaf: 11 },
 				endpoint: null
 			},
 			{
 				id: "/rule/elysia",
 				pattern: /^\/rule\/elysia\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 10 },
+				page: { layouts: [0,], errors: [1,], leaf: 12 },
 				endpoint: null
 			}
 		],

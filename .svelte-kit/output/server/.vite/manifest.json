@@ -173,7 +173,7 @@
       "_Expansion.svelte_svelte_type_style_lang.js"
     ],
     "css": [
-      "_app/immutable/assets/_layout.DL0a050i.css"
+      "_app/immutable/assets/_layout.DbCfKsqE.css"
     ],
     "assets": [
       "_app/immutable/assets/Dank Mono Regular.CfN0Ttr4.otf",
@@ -250,6 +250,30 @@
     "imports": [
       "_TabPanel.svelte_svelte_type_style_lang.js",
       "_CopyCode.js",
+      "_Expansion.svelte_svelte_type_style_lang.js",
+      "_exports.js",
+      "_root.js"
+    ]
+  },
+  "src/routes/6ugo/note/sklearn/+page.md": {
+    "file": "entries/pages/6ugo/note/sklearn/_page.md.js",
+    "name": "entries/pages/6ugo/note/sklearn/_page.md",
+    "src": "src/routes/6ugo/note/sklearn/+page.md",
+    "isEntry": true,
+    "imports": [
+      "_TabPanel.svelte_svelte_type_style_lang.js",
+      "_Expansion.svelte_svelte_type_style_lang.js",
+      "_exports.js",
+      "_root.js"
+    ]
+  },
+  "src/routes/6ugo/note/sklearn/KNN/+page.md": {
+    "file": "entries/pages/6ugo/note/sklearn/KNN/_page.md.js",
+    "name": "entries/pages/6ugo/note/sklearn/KNN/_page.md",
+    "src": "src/routes/6ugo/note/sklearn/KNN/+page.md",
+    "isEntry": true,
+    "imports": [
+      "_TabPanel.svelte_svelte_type_style_lang.js",
       "_Expansion.svelte_svelte_type_style_lang.js",
       "_exports.js",
       "_root.js"

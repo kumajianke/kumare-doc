@@ -2,7 +2,7 @@ import { defaultTheme } from '@sveltepress/theme-default'
 import { sveltepress } from '@sveltepress/vite'
 import { defineConfig } from 'vite'
 import remarkMermaid from './src/lib/remark-mermaid.js'
-
+import { searchIndexPlugin } from './searchPlugin.ts'
 
 const config = defineConfig({
 
@@ -10,6 +10,7 @@ const config = defineConfig({
 		allowedHosts: ["*"]
 	},
 	plugins: [
+		searchIndexPlugin(),
 		sveltepress({
 			remarkPlugins: [remarkMermaid],
 			theme: defaultTheme({

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import SearchBox from "$lib/SearchBox.svelte";
   const { children } = $props();
 
   onMount(async () => {
@@ -55,4 +56,9 @@
 </script>
 
 <!-- Leave this. Or you can add more content for your custom layout -->
-{@render children?.()}
+<div class="layout-container" style="padding: 1rem; max-width: 1200px; margin: 0 auto;">
+  <div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">
+    <SearchBox />
+  </div>
+  {@render children?.()}
+</div>

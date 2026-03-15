@@ -4,7 +4,7 @@ import "./exports.js";
 import "./utils.js";
 import "@sveltejs/kit/internal/server";
 import { p as page } from "./index.js";
-import { t as themeOptions, E as External, g as getPathFromBase, h as html, p as parseImageSrc, s as siteConfig, m as anchors, l as sidebar, j as showHeader, k as showLayout } from "./Expansion.svelte_svelte_type_style_lang.js";
+import { t as themeOptions, g as getPathFromBase, E as External, h as html, p as parseImageSrc, s as siteConfig, m as anchors, l as sidebar, j as showHeader, k as showLayout } from "./Expansion.svelte_svelte_type_style_lang.js";
 import "clsx";
 function Edit($$renderer, $$props) {
   const { $$slots, $$events, ...rest } = $$props;

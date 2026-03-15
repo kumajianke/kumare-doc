@@ -7,7 +7,7 @@ import "../../../chunks/root.js";
 function _page_md($$renderer) {
   const fm = {
     "pageType": "md",
-    "lastUpdate": "2026/03/09 16:55:19",
+    "lastUpdate": "2026/03/14 20:13:26",
     "anchors": [{ "slugId": "规范", "title": "规范", "depth": 2 }]
   };
   PageLayout($$renderer, {

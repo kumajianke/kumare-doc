@@ -6,7 +6,7 @@ import "../../chunks/utils.js";
 import "@sveltejs/kit/internal/server";
 import { p as page } from "../../chunks/index.js";
 import { L as Link } from "../../chunks/Link.js";
-import { h as html, t as themeOptions, E as External, g as getPathFromBase, s as siteConfig, p as parseImageSrc, a as tocCollapsed, n as navCollapsed, d as darkMode, b as scrollDirection, i as isLinkActive, c as sidebarCollapsed, r as resolvedSidebar, e as resolveSidebar, f as isDark, j as showHeader, k as showLayout, l as sidebar, m as anchors } from "../../chunks/Expansion.svelte_svelte_type_style_lang.js";
+import { h as html, t as themeOptions, g as getPathFromBase, E as External, s as siteConfig, p as parseImageSrc, a as tocCollapsed, n as navCollapsed, d as darkMode, b as scrollDirection, i as isLinkActive, c as sidebarCollapsed, r as resolvedSidebar, e as resolveSidebar, f as isDark, j as showHeader, k as showLayout, l as sidebar, m as anchors } from "../../chunks/Expansion.svelte_svelte_type_style_lang.js";
 function onDestroy(fn) {
   /** @type {SSRContext} */
   ssr_context.r.on_destroy(fn);
@@ -130,7 +130,10 @@ function NavItem($$renderer, $$props) {
       $$events,
       ...rest
     } = $$props;
-    let active = derived(() => page.url.pathname.startsWith(`${to.endsWith("/") ? to : `${to}/`}`));
+    const normalizedTo = to.endsWith("/") ? to.slice(0, -1) : to;
+    const isExactMatch = (p) => p === to;
+    const isChildMatch = (p) => p.startsWith(`${normalizedTo}/`);
+    let active = derived(() => isExactMatch(page.url.pathname) || isChildMatch(page.url.pathname));
     if (items && items.length) {
       $$renderer2.push("<!--[0-->");
       $$renderer2.push(`<div${attr_class("nav-item svelte-92vz8", void 0, {
@@ -448,12 +451,6 @@ function NavbarMobile($$renderer, $$props) {
     if ($$store_subs) unsubscribe_stores($$store_subs);
   });
 }
-function Search($$renderer, $$props) {
-  $$renderer.component(($$renderer2) => {
-    const { appId, apiKey, indexName, $$slots, $$events, ...rest } = $$props;
-    $$renderer2.push(`<div id="docsearch" class="ml-4"></div>`);
-  });
-}
 function Moon($$renderer) {
   $$renderer.push(`<svg width="1em" height="1em" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><g strokeDasharray="2"><path d="M12 21v1M21 12h1M12 3v-1M3 12h-1"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.2s" values="4;2"></animate></path><path d="M18.5 18.5l0.5 0.5M18.5 5.5l0.5 -0.5M5.5 5.5l-0.5 -0.5M5.5 18.5l-0.5 0.5"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.2s" dur="0.2s" values="4;2"></animate></path></g><path d="M7 6 C7 12.08 11.92 17 18 17 C18.53 17 19.05 16.96 19.56 16.89 C17.95 19.36 15.17 21 12 21 C7.03 21 3 16.97 3 12 C3 8.83 4.64 6.05 7.11 4.44 C7.04 4.95 7 5.47 7 6 Z" opacity="0"><set attributeName="opacity" begin="0.5s" to="1"></set></path></g><g fill="currentColor" fillOpacity="0"><path d="m15.22 6.03l2.53-1.94L14.56 4L13.5 1l-1.06 3l-3.19.09l2.53 1.94l-.91 3.06l2.63-1.81l2.63 1.81z"><animate id="lineMdSunnyOutlineToMoonLoopTransition0" fill="freeze" attributeName="fill-opacity" begin="0.6s;lineMdSunnyOutlineToMoonLoopTransition0.begin+6s" dur="0.4s" values="0;1"></animate><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+2.2s" dur="0.4s" values="1;0"></animate></path><path d="M13.61 5.25L15.25 4l-2.06-.05L12.5 2l-.69 1.95L9.75 4l1.64 1.25l-.59 1.98l1.7-1.17l1.7 1.17z"><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+3s" dur="0.4s" values="0;1"></animate><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+5.2s" dur="0.4s" values="1;0"></animate></path><path d="M19.61 12.25L21.25 11l-2.06-.05L18.5 9l-.69 1.95l-2.06.05l1.64 1.25l-.59 1.98l1.7-1.17l1.7 1.17z"><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+0.4s" dur="0.4s" values="0;1"></animate><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+2.8s" dur="0.4s" values="1;0"></animate></path><path d="m20.828 9.731l1.876-1.439l-2.366-.067L19.552 6l-.786 2.225l-2.366.067l1.876 1.439L17.601 12l1.951-1.342L21.503 12z"><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+3.4s" dur="0.4s" values="0;1"></animate><animate fill="freeze" attributeName="fill-opacity" begin="lineMdSunnyOutlineToMoonLoopTransition0.begin+5.6s" dur="0.4s" values="1;0"></animate></path></g><mask id="lineMdSunnyOutlineToMoonLoopTransition1"><circle cx="12" cy="12" r="12" fill="#fff"></circle><circle cx="12" cy="12" r="4"><animate fill="freeze" attributeName="r" begin="0.1s" dur="0.4s" values="4;8"></animate></circle><circle cx="22" cy="2" r="3" fill="#fff"><animate fill="freeze" attributeName="cx" begin="0.1s" dur="0.4s" values="22;18"></animate><animate fill="freeze" attributeName="cy" begin="0.1s" dur="0.4s" values="2;6"></animate><animate fill="freeze" attributeName="r" begin="0.1s" dur="0.4s" values="3;12"></animate></circle><circle cx="22" cy="2" r="1"><animate fill="freeze" attributeName="cx" begin="0.1s" dur="0.4s" values="22;18"></animate><animate fill="freeze" attributeName="cy" begin="0.1s" dur="0.4s" values="2;6"></animate><animate fill="freeze" attributeName="r" begin="0.1s" dur="0.4s" values="1;10"></animate></circle></mask><circle cx="12" cy="12" r="6" fill="currentColor" mask="url(#lineMdSunnyOutlineToMoonLoopTransition1)"><set attributeName="opacity" begin="0.5s" to="0"></set><animate fill="freeze" attributeName="r" begin="0.1s" dur="0.4s" values="6;10"></animate></circle></svg>`);
 }
@@ -533,11 +530,18 @@ function Navbar($$renderer, $$props) {
       $$renderer2.push("<!--[-1-->");
     }
     $$renderer2.push(`<!--]--></div> `);
-    if (themeOptions.docsearch) {
+    if (themeOptions.search && typeof themeOptions.search !== "string") {
       $$renderer2.push("<!--[0-->");
       $$renderer2.push(`<div${attr_class("doc-search svelte-1uynsho", void 0, { "is-home": isHome(), "move": !isHome() && !hasError() })}>`);
-      Search($$renderer2, spread_props([themeOptions.docsearch]));
-      $$renderer2.push(`<!----></div>`);
+      if (themeOptions.search) {
+        $$renderer2.push("<!--[-->");
+        (0, themeOptions.search)($$renderer2, {});
+        $$renderer2.push("<!--]-->");
+      } else {
+        $$renderer2.push("<!--[!-->");
+        $$renderer2.push("<!--]-->");
+      }
+      $$renderer2.push(`</div>`);
     } else {
       $$renderer2.push("<!--[-1-->");
     }
@@ -735,6 +739,20 @@ function GlobalLayout($$renderer, $$props) {
     if ($$store_subs) unsubscribe_stores($$store_subs);
   });
 }
+function SearchBox($$renderer, $$props) {
+  $$renderer.component(($$renderer2) => {
+    let searchQuery = "";
+    $$renderer2.push(`<div class="search-container svelte-d4uu4c"><div class="search-bar svelte-d4uu4c"><input type="text"${attr("value", searchQuery)} placeholder="搜索文档..." class="search-input svelte-d4uu4c"/> <button class="update-btn svelte-d4uu4c" title="更新搜索索引">↻</button></div> `);
+    {
+      $$renderer2.push("<!--[-1-->");
+    }
+    $$renderer2.push(`<!--]--> `);
+    {
+      $$renderer2.push("<!--[-1-->");
+    }
+    $$renderer2.push(`<!--]--></div>`);
+  });
+}
 function _layout($$renderer, $$props) {
   $$renderer.component(($$renderer2) => {
     const fm = {};
@@ -742,8 +760,11 @@ function _layout($$renderer, $$props) {
     GlobalLayout($$renderer2, {
       fm,
       children: ($$renderer3) => {
+        $$renderer3.push(`<div class="layout-container" style="padding: 1rem; max-width: 1200px; margin: 0 auto;"><div style="display: flex; justify-content: flex-end; margin-bottom: 1rem;">`);
+        SearchBox($$renderer3);
+        $$renderer3.push(`<!----></div> `);
         children?.($$renderer3);
-        $$renderer3.push(`<!---->`);
+        $$renderer3.push(`<!----></div>`);
       },
       $$slots: { default: true }
     });

@@ -52,6 +52,7 @@ const MAYBE_DIRTY = 1 << 12;
 const INERT = 1 << 13;
 const DESTROYED = 1 << 14;
 const REACTION_RAN = 1 << 15;
+const DESTROYING = 1 << 25;
 const EFFECT_TRANSPARENT = 1 << 16;
 const EAGER_EFFECT = 1 << 17;
 const HEAD_EFFECT = 1 << 18;
@@ -186,6 +187,10 @@ function push$1(props, runes = false, fn) {
     e: null,
     s: props,
     x: null,
+    r: (
+      /** @type {Effect} */
+      active_effect
+    ),
     l: null
   };
 }
@@ -295,10 +300,12 @@ function defer_effect(effect, dirty_effects, maybe_dirty_effects) {
 const batches = /* @__PURE__ */ new Set();
 let current_batch = null;
 let batch_values = null;
-let queued_root_effects = [];
 let last_scheduled_effect = null;
 let is_flushing_sync = false;
+let is_processing = false;
 let collected_effects = null;
+let legacy_updates = null;
+var flush_count = 0;
 let uid = 1;
 class Batch {
   // for debugging. TODO remove once async is stable
@@ -340,6 +347,11 @@ class Batch {
    * @type {{ promise: Promise<void>, resolve: (value?: any) => void, reject: (reason: unknown) => void } | null}
    */
   #deferred = null;
+  /**
+   * The root effects that need to be flushed
+   * @type {Effect[]}
+   */
+  #roots = [];
   /**
    * Deferred effects (which run after async work has completed) that are DIRTY
    * @type {Set<Effect>}
@@ -383,27 +395,53 @@ class Batch {
       this.#skipped_branches.delete(effect);
       for (var e of tracked.d) {
         set_signal_status(e, DIRTY);
-        schedule_effect(e);
+        this.schedule(e);
       }
       for (e of tracked.m) {
         set_signal_status(e, MAYBE_DIRTY);
-        schedule_effect(e);
+        this.schedule(e);
       }
     }
   }
-  /**
-   *
-   * @param {Effect[]} root_effects
-   */
-  process(root_effects) {
-    queued_root_effects = [];
+  #process() {
+    if (flush_count++ > 1e3) {
+      batches.delete(this);
+      infinite_loop_guard();
+    }
+    if (!this.#is_deferred()) {
+      for (const e of this.#dirty_effects) {
+        this.#maybe_dirty_effects.delete(e);
+        set_signal_status(e, DIRTY);
+        this.schedule(e);
+      }
+      for (const e of this.#maybe_dirty_effects) {
+        set_signal_status(e, MAYBE_DIRTY);
+        this.schedule(e);
+      }
+    }
+    const roots = this.#roots;
+    this.#roots = [];
     this.apply();
     var effects = collected_effects = [];
     var render_effects = [];
-    for (const root2 of root_effects) {
-      this.#traverse_effect_tree(root2, effects, render_effects);
+    var updates = legacy_updates = [];
+    for (const root2 of roots) {
+      try {
+        this.#traverse(root2, effects, render_effects);
+      } catch (e) {
+        reset_all(root2);
+        throw e;
+      }
+    }
+    current_batch = null;
+    if (updates.length > 0) {
+      var batch = Batch.ensure();
+      for (const e of updates) {
+        batch.schedule(e);
+      }
     }
     collected_effects = null;
+    legacy_updates = null;
     if (this.#is_deferred()) {
       this.#defer_effects(render_effects);
       this.#defer_effects(effects);
@@ -411,19 +449,33 @@ class Batch {
         reset_branch(e, t);
       }
     } else {
-      current_batch = null;
-      for (const fn of this.#commit_callbacks) fn(this);
-      this.#commit_callbacks.clear();
       if (this.#pending === 0) {
-        this.#commit();
+        batches.delete(this);
       }
-      flush_queued_effects(render_effects);
-      flush_queued_effects(effects);
       this.#dirty_effects.clear();
       this.#maybe_dirty_effects.clear();
+      for (const fn of this.#commit_callbacks) fn(this);
+      this.#commit_callbacks.clear();
+      flush_queued_effects(render_effects);
+      flush_queued_effects(effects);
       this.#deferred?.resolve();
     }
-    batch_values = null;
+    var next_batch = (
+      /** @type {Batch | null} */
+      /** @type {unknown} */
+      current_batch
+    );
+    if (this.#roots.length > 0) {
+      const batch2 = next_batch ??= this;
+      batch2.#roots.push(...this.#roots.filter((r) => !batch2.#roots.includes(r)));
+    }
+    if (next_batch !== null) {
+      batches.add(next_batch);
+      next_batch.#process();
+    }
+    if (!batches.has(this)) {
+      this.#commit();
+    }
   }
   /**
    * Traverse the effect tree, executing effects or stashing
@@ -432,28 +484,22 @@ class Batch {
    * @param {Effect[]} effects
    * @param {Effect[]} render_effects
    */
-  #traverse_effect_tree(root2, effects, render_effects) {
+  #traverse(root2, effects, render_effects) {
     root2.f ^= CLEAN;
     var effect = root2.first;
     while (effect !== null) {
       var flags2 = effect.f;
       var is_branch = (flags2 & (BRANCH_EFFECT | ROOT_EFFECT)) !== 0;
       var is_skippable_branch = is_branch && (flags2 & CLEAN) !== 0;
-      var inert = (flags2 & INERT) !== 0;
-      var skip = is_skippable_branch || this.#skipped_branches.has(effect);
+      var skip = is_skippable_branch || (flags2 & INERT) !== 0 || this.#skipped_branches.has(effect);
       if (!skip && effect.fn !== null) {
         if (is_branch) {
-          if (!inert) effect.f ^= CLEAN;
+          effect.f ^= CLEAN;
         } else if ((flags2 & EFFECT) !== 0) {
           effects.push(effect);
-        } else if ((flags2 & (RENDER_EFFECT | MANAGED_EFFECT)) !== 0 && inert) {
-          render_effects.push(effect);
         } else if (is_dirty(effect)) {
+          if ((flags2 & BLOCK_EFFECT) !== 0) this.#maybe_dirty_effects.add(effect);
           update_effect(effect);
-          if ((flags2 & BLOCK_EFFECT) !== 0) {
-            this.#maybe_dirty_effects.add(effect);
-            if (inert) set_signal_status(effect, DIRTY);
-          }
         }
         var child = effect.first;
         if (child !== null) {
@@ -483,11 +529,11 @@ class Batch {
    * Associate a change to a given source with the current
    * batch, noting its previous and current values
    * @param {Source} source
-   * @param {any} value
+   * @param {any} old_value
    */
-  capture(source2, value) {
-    if (value !== UNINITIALIZED && !this.previous.has(source2)) {
-      this.previous.set(source2, value);
+  capture(source2, old_value) {
+    if (old_value !== UNINITIALIZED && !this.previous.has(source2)) {
+      this.previous.set(source2, old_value);
     }
     if ((source2.f & ERROR_VALUE) === 0) {
       this.current.set(source2, source2.v);
@@ -496,79 +542,66 @@ class Batch {
   }
   activate() {
     current_batch = this;
-    this.apply();
   }
   deactivate() {
-    if (current_batch !== this) return;
     current_batch = null;
     batch_values = null;
   }
   flush() {
-    if (queued_root_effects.length > 0) {
+    try {
+      is_processing = true;
       current_batch = this;
-      flush_effects();
-    } else if (this.#pending === 0 && !this.is_fork) {
-      for (const fn of this.#commit_callbacks) fn(this);
-      this.#commit_callbacks.clear();
-      this.#commit();
-      this.#deferred?.resolve();
+      this.#process();
+    } finally {
+      flush_count = 0;
+      last_scheduled_effect = null;
+      collected_effects = null;
+      legacy_updates = null;
+      is_processing = false;
+      current_batch = null;
+      batch_values = null;
+      old_values.clear();
     }
-    this.deactivate();
   }
   discard() {
     for (const fn of this.#discard_callbacks) fn(this);
     this.#discard_callbacks.clear();
   }
   #commit() {
-    if (batches.size > 1) {
-      this.previous.clear();
-      var previous_batch = current_batch;
-      var previous_batch_values = batch_values;
-      var is_earlier = true;
-      for (const batch of batches) {
-        if (batch === this) {
-          is_earlier = false;
-          continue;
-        }
-        const sources = [];
-        for (const [source2, value] of this.current) {
-          if (batch.current.has(source2)) {
-            if (is_earlier && value !== batch.current.get(source2)) {
-              batch.current.set(source2, value);
-            } else {
-              continue;
-            }
+    for (const batch of batches) {
+      var is_earlier = batch.id < this.id;
+      var sources = [];
+      for (const [source3, value] of this.current) {
+        if (batch.current.has(source3)) {
+          if (is_earlier && value !== batch.current.get(source3)) {
+            batch.current.set(source3, value);
+          } else {
+            continue;
           }
-          sources.push(source2);
         }
-        if (sources.length === 0) {
-          continue;
-        }
-        const others = [...batch.current.keys()].filter((s) => !this.current.has(s));
-        if (others.length > 0) {
-          var prev_queued_root_effects = queued_root_effects;
-          queued_root_effects = [];
-          const marked = /* @__PURE__ */ new Set();
-          const checked = /* @__PURE__ */ new Map();
-          for (const source2 of sources) {
-            mark_effects(source2, others, marked, checked);
-          }
-          if (queued_root_effects.length > 0) {
-            current_batch = batch;
-            batch.apply();
-            for (const root2 of queued_root_effects) {
-              batch.#traverse_effect_tree(root2, [], []);
-            }
-            batch.deactivate();
-          }
-          queued_root_effects = prev_queued_root_effects;
-        }
+        sources.push(source3);
       }
-      current_batch = previous_batch;
-      batch_values = previous_batch_values;
+      if (sources.length === 0) {
+        continue;
+      }
+      var others = [...batch.current.keys()].filter((s) => !this.current.has(s));
+      if (others.length > 0) {
+        batch.activate();
+        var marked = /* @__PURE__ */ new Set();
+        var checked = /* @__PURE__ */ new Map();
+        for (var source2 of sources) {
+          mark_effects(source2, others, marked, checked);
+        }
+        if (batch.#roots.length > 0) {
+          batch.apply();
+          for (var root2 of batch.#roots) {
+            batch.#traverse(root2, [], []);
+          }
+          batch.#roots = [];
+        }
+        batch.deactivate();
+      }
     }
-    this.#skipped_branches.clear();
-    batches.delete(this);
   }
   /**
    *
@@ -579,34 +612,32 @@ class Batch {
     if (blocking) this.#blocking_pending += 1;
   }
   /**
-   *
    * @param {boolean} blocking
+   * @param {boolean} skip - whether to skip updates (because this is triggered by a stale reaction)
    */
-  decrement(blocking) {
+  decrement(blocking, skip) {
     this.#pending -= 1;
     if (blocking) this.#blocking_pending -= 1;
-    if (this.#decrement_queued) return;
+    if (this.#decrement_queued || skip) return;
     this.#decrement_queued = true;
     queue_micro_task(() => {
       this.#decrement_queued = false;
-      if (!this.#is_deferred()) {
-        this.revive();
-      } else if (queued_root_effects.length > 0) {
-        this.flush();
-      }
+      this.flush();
     });
   }
-  revive() {
-    for (const e of this.#dirty_effects) {
-      this.#maybe_dirty_effects.delete(e);
-      set_signal_status(e, DIRTY);
-      schedule_effect(e);
+  /**
+   * @param {Set<Effect>} dirty_effects
+   * @param {Set<Effect>} maybe_dirty_effects
+   */
+  transfer_effects(dirty_effects, maybe_dirty_effects) {
+    for (const e of dirty_effects) {
+      this.#dirty_effects.add(e);
     }
-    for (const e of this.#maybe_dirty_effects) {
-      set_signal_status(e, MAYBE_DIRTY);
-      schedule_effect(e);
+    for (const e of maybe_dirty_effects) {
+      this.#maybe_dirty_effects.add(e);
     }
-    this.flush();
+    dirty_effects.clear();
+    maybe_dirty_effects.clear();
   }
   /** @param {(batch: Batch) => void} fn */
   oncommit(fn) {
@@ -622,20 +653,53 @@ class Batch {
   static ensure() {
     if (current_batch === null) {
       const batch = current_batch = new Batch();
-      batches.add(current_batch);
-      if (!is_flushing_sync) {
-        queue_micro_task(() => {
-          if (current_batch !== batch) {
-            return;
-          }
-          batch.flush();
-        });
+      if (!is_processing) {
+        batches.add(current_batch);
+        if (!is_flushing_sync) {
+          queue_micro_task(() => {
+            if (current_batch !== batch) {
+              return;
+            }
+            batch.flush();
+          });
+        }
       }
     }
     return current_batch;
   }
   apply() {
-    return;
+    {
+      batch_values = null;
+      return;
+    }
+  }
+  /**
+   *
+   * @param {Effect} effect
+   */
+  schedule(effect) {
+    last_scheduled_effect = effect;
+    if (effect.b?.is_pending && (effect.f & (EFFECT | RENDER_EFFECT | MANAGED_EFFECT)) !== 0 && (effect.f & REACTION_RAN) === 0) {
+      effect.b.defer_effect(effect);
+      return;
+    }
+    var e = effect;
+    while (e.parent !== null) {
+      e = e.parent;
+      var flags2 = e.f;
+      if (collected_effects !== null && e === active_effect) {
+        if ((active_reaction === null || (active_reaction.f & DERIVED) === 0) && true) {
+          return;
+        }
+      }
+      if ((flags2 & (ROOT_EFFECT | BRANCH_EFFECT)) !== 0) {
+        if ((flags2 & CLEAN) === 0) {
+          return;
+        }
+        e.f ^= CLEAN;
+      }
+    }
+    this.#roots.push(e);
   }
 }
 function flushSync(fn) {
@@ -646,41 +710,16 @@ function flushSync(fn) {
     if (fn) ;
     while (true) {
       flush_tasks();
-      if (queued_root_effects.length === 0) {
-        current_batch?.flush();
-        if (queued_root_effects.length === 0) {
-          last_scheduled_effect = null;
-          return (
-            /** @type {T} */
-            result
-          );
-        }
+      if (current_batch === null) {
+        return (
+          /** @type {T} */
+          result
+        );
       }
-      flush_effects();
+      current_batch.flush();
     }
   } finally {
     is_flushing_sync = was_flushing_sync;
-  }
-}
-function flush_effects() {
-  var source_stacks = null;
-  try {
-    var flush_count = 0;
-    while (queued_root_effects.length > 0) {
-      var batch = Batch.ensure();
-      if (flush_count++ > 1e3) {
-        var updates, entry;
-        if (browser) ;
-        infinite_loop_guard();
-      }
-      batch.process(queued_root_effects);
-      old_values.clear();
-      if (browser) ;
-    }
-  } finally {
-    queued_root_effects = [];
-    last_scheduled_effect = null;
-    collected_effects = null;
   }
 }
 function infinite_loop_guard() {
@@ -778,29 +817,8 @@ function depends_on(reaction, sources, checked) {
   checked.set(reaction, false);
   return false;
 }
-function schedule_effect(signal) {
-  var effect = last_scheduled_effect = signal;
-  var boundary2 = effect.b;
-  if (boundary2?.is_pending && (signal.f & (EFFECT | RENDER_EFFECT | MANAGED_EFFECT)) !== 0 && (signal.f & REACTION_RAN) === 0) {
-    boundary2.defer_effect(signal);
-    return;
-  }
-  while (effect.parent !== null) {
-    effect = effect.parent;
-    var flags2 = effect.f;
-    if (collected_effects !== null && effect === active_effect) {
-      if ((signal.f & RENDER_EFFECT) === 0) {
-        return;
-      }
-    }
-    if ((flags2 & (ROOT_EFFECT | BRANCH_EFFECT)) !== 0) {
-      if ((flags2 & CLEAN) === 0) {
-        return;
-      }
-      effect.f ^= CLEAN;
-    }
-  }
-  queued_root_effects.push(effect);
+function schedule_effect(effect) {
+  current_batch.schedule(effect);
 }
 function reset_branch(effect, tracked) {
   if ((effect.f & BRANCH_EFFECT) !== 0 && (effect.f & CLEAN) !== 0) {
@@ -815,6 +833,14 @@ function reset_branch(effect, tracked) {
   var e = effect.first;
   while (e !== null) {
     reset_branch(e, tracked);
+    e = e.next;
+  }
+}
+function reset_all(effect) {
+  set_signal_status(effect, CLEAN);
+  var e = effect.first;
+  while (e !== null) {
+    reset_all(e);
     e = e.next;
   }
 }
@@ -975,7 +1001,6 @@ class Boundary {
       var anchor = create_text();
       fragment.append(anchor);
       this.#main_effect = this.#run(() => {
-        Batch.ensure();
         return branch(() => this.#children(anchor));
       });
       if (this.#pending_count === 0) {
@@ -988,7 +1013,10 @@ class Boundary {
             this.#pending_effect = null;
           }
         );
-        this.#resolve();
+        this.#resolve(
+          /** @type {Batch} */
+          current_batch
+        );
       }
     });
   }
@@ -1009,24 +1037,21 @@ class Boundary {
         );
         this.#pending_effect = branch(() => pending(this.#anchor));
       } else {
-        this.#resolve();
+        this.#resolve(
+          /** @type {Batch} */
+          current_batch
+        );
       }
     } catch (error) {
       this.error(error);
     }
   }
-  #resolve() {
+  /**
+   * @param {Batch} batch
+   */
+  #resolve(batch) {
     this.is_pending = false;
-    for (const e of this.#dirty_effects) {
-      set_signal_status(e, DIRTY);
-      schedule_effect(e);
-    }
-    for (const e of this.#maybe_dirty_effects) {
-      set_signal_status(e, MAYBE_DIRTY);
-      schedule_effect(e);
-    }
-    this.#dirty_effects.clear();
-    this.#maybe_dirty_effects.clear();
+    batch.transfer_effects(this.#dirty_effects, this.#maybe_dirty_effects);
   }
   /**
    * Defer an effect inside a pending boundary until the boundary resolves
@@ -1057,6 +1082,7 @@ class Boundary {
     set_active_reaction(this.#effect);
     set_component_context(this.#effect.ctx);
     try {
+      Batch.ensure();
       return fn();
     } catch (e) {
       handle_error(e);
@@ -1071,17 +1097,18 @@ class Boundary {
    * Updates the pending count associated with the currently visible pending snippet,
    * if any, such that we can replace the snippet with content once work is done
    * @param {1 | -1} d
+   * @param {Batch} batch
    */
-  #update_pending_count(d) {
+  #update_pending_count(d, batch) {
     if (!this.has_pending_snippet()) {
       if (this.parent) {
-        this.parent.#update_pending_count(d);
+        this.parent.#update_pending_count(d, batch);
       }
       return;
     }
     this.#pending_count += d;
     if (this.#pending_count === 0) {
-      this.#resolve();
+      this.#resolve(batch);
       if (this.#pending_effect) {
         pause_effect(this.#pending_effect, () => {
           this.#pending_effect = null;
@@ -1098,9 +1125,10 @@ class Boundary {
    * and controls when the current `pending` snippet (if any) is removed.
    * Do not call from inside the class
    * @param {1 | -1} d
+   * @param {Batch} batch
    */
-  update_pending_count(d) {
-    this.#update_pending_count(d);
+  update_pending_count(d, batch) {
+    this.#update_pending_count(d, batch);
     this.#local_pending_count += d;
     if (!this.#effect_pending || this.#pending_count_update_queued) return;
     this.#pending_count_update_queued = true;
@@ -1162,7 +1190,6 @@ class Boundary {
         });
       }
       this.#run(() => {
-        Batch.ensure();
         this.#render();
       });
     };
@@ -1176,7 +1203,6 @@ class Boundary {
       }
       if (failed) {
         this.#failed_effect = this.#run(() => {
-          Batch.ensure();
           try {
             return branch(() => {
               var effect = (
@@ -1264,11 +1290,13 @@ function execute_derived(derived2) {
   return value;
 }
 function update_derived(derived2) {
+  var old_value = derived2.v;
   var value = execute_derived(derived2);
   if (!derived2.equals(value)) {
     derived2.wv = increment_write_version();
     if (!current_batch?.is_fork || derived2.deps === null) {
       derived2.v = value;
+      current_batch?.capture(derived2, old_value);
       if (derived2.deps === null) {
         set_signal_status(derived2, CLEAN);
         return;
@@ -1343,9 +1371,9 @@ function set(source2, value, should_proxy = false) {
     state_unsafe_mutation();
   }
   let new_value = should_proxy ? proxy(value) : value;
-  return internal_set(source2, new_value);
+  return internal_set(source2, new_value, legacy_updates);
 }
-function internal_set(source2, value) {
+function internal_set(source2, value, updated_during_traversal = null) {
   if (!source2.equals(value)) {
     var old_value = source2.v;
     if (is_destroying_effect) {
@@ -1364,10 +1392,12 @@ function internal_set(source2, value) {
       if ((source2.f & DIRTY) !== 0) {
         execute_derived(derived2);
       }
-      update_derived_status(derived2);
+      if (batch_values === null) {
+        update_derived_status(derived2);
+      }
     }
     source2.wv = increment_write_version();
-    mark_reactions(source2, DIRTY);
+    mark_reactions(source2, DIRTY, updated_during_traversal);
     if (active_effect !== null && (active_effect.f & CLEAN) !== 0 && (active_effect.f & (BRANCH_EFFECT | ROOT_EFFECT)) === 0) {
       if (untracked_writes === null) {
         set_untracked_writes([source2]);
@@ -1396,7 +1426,7 @@ function flush_eager_effects() {
 function increment(source2) {
   set(source2, source2.v + 1);
 }
-function mark_reactions(signal, status) {
+function mark_reactions(signal, status, updated_during_traversal) {
   var reactions = signal.reactions;
   if (reactions === null) return;
   var length = reactions.length;
@@ -1417,19 +1447,21 @@ function mark_reactions(signal, status) {
         if (flags2 & CONNECTED) {
           reaction.f |= WAS_MARKED;
         }
-        mark_reactions(derived2, MAYBE_DIRTY);
+        mark_reactions(derived2, MAYBE_DIRTY, updated_during_traversal);
       }
     } else if (not_dirty) {
-      if ((flags2 & BLOCK_EFFECT) !== 0 && eager_block_effects !== null) {
-        eager_block_effects.add(
-          /** @type {Effect} */
-          reaction
-        );
-      }
-      schedule_effect(
+      var effect = (
         /** @type {Effect} */
         reaction
       );
+      if ((flags2 & BLOCK_EFFECT) !== 0 && eager_block_effects !== null) {
+        eager_block_effects.add(effect);
+      }
+      if (updated_during_traversal !== null) {
+        updated_during_traversal.push(effect);
+      } else {
+        schedule_effect(effect);
+      }
     }
   }
 }
@@ -1715,7 +1747,7 @@ function create_effect(type, fn) {
     if (collected_effects !== null) {
       collected_effects.push(effect);
     } else {
-      schedule_effect(effect);
+      Batch.ensure().schedule(effect);
     }
   } else if (fn !== null) {
     try {
@@ -1834,9 +1866,9 @@ function destroy_effect(effect, remove_dom = true) {
     );
     removed = true;
   }
+  set_signal_status(effect, DESTROYING);
   destroy_effect_children(effect, remove_dom && !removed);
   remove_reactions(effect, 0);
-  set_signal_status(effect, DESTROYED);
   var transitions = effect.nodes && effect.nodes.t;
   if (transitions !== null) {
     for (const transition of transitions) {
@@ -1844,6 +1876,8 @@ function destroy_effect(effect, remove_dom = true) {
     }
   }
   execute_effect_teardown(effect);
+  effect.f ^= DESTROYING;
+  effect.f |= DESTROYED;
   var parent = effect.parent;
   if (parent !== null && parent.first !== null) {
     unlink_effect(effect);
@@ -2300,42 +2334,19 @@ function untrack(fn) {
     untracking = previous_untracking;
   }
 }
-const DOM_BOOLEAN_ATTRIBUTES = [
-  "allowfullscreen",
-  "async",
-  "autofocus",
-  "autoplay",
-  "checked",
-  "controls",
-  "default",
-  "disabled",
-  "formnovalidate",
-  "indeterminate",
-  "inert",
-  "ismap",
-  "loop",
-  "multiple",
-  "muted",
-  "nomodule",
-  "novalidate",
-  "open",
-  "playsinline",
-  "readonly",
-  "required",
-  "reversed",
-  "seamless",
-  "selected",
-  "webkitdirectory",
-  "defer",
-  "disablepictureinpicture",
-  "disableremoteplayback"
-];
-function is_boolean_attribute(name) {
-  return DOM_BOOLEAN_ATTRIBUTES.includes(name);
-}
-const PASSIVE_EVENTS = ["touchstart", "touchmove"];
-function is_passive_event(name) {
-  return PASSIVE_EVENTS.includes(name);
+function subscribe_to_store(store, run, invalidate) {
+  if (store == null) {
+    run(void 0);
+    return noop;
+  }
+  const unsub = untrack(
+    () => store.subscribe(
+      run,
+      // @ts-expect-error
+      invalidate
+    )
+  );
+  return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }
 const event_symbol = /* @__PURE__ */ Symbol("events");
 const all_registered_events = /* @__PURE__ */ new Set();
@@ -2433,6 +2444,43 @@ function assign_nodes(start, end) {
   if (effect.nodes === null) {
     effect.nodes = { start, end, a: null, t: null };
   }
+}
+const DOM_BOOLEAN_ATTRIBUTES = [
+  "allowfullscreen",
+  "async",
+  "autofocus",
+  "autoplay",
+  "checked",
+  "controls",
+  "default",
+  "disabled",
+  "formnovalidate",
+  "indeterminate",
+  "inert",
+  "ismap",
+  "loop",
+  "multiple",
+  "muted",
+  "nomodule",
+  "novalidate",
+  "open",
+  "playsinline",
+  "readonly",
+  "required",
+  "reversed",
+  "seamless",
+  "selected",
+  "webkitdirectory",
+  "defer",
+  "disablepictureinpicture",
+  "disableremoteplayback"
+];
+function is_boolean_attribute(name) {
+  return DOM_BOOLEAN_ATTRIBUTES.includes(name);
+}
+const PASSIVE_EVENTS = ["touchstart", "touchmove"];
+function is_passive_event(name) {
+  return PASSIVE_EVENTS.includes(name);
 }
 function mount(component, options) {
   return _mount(component, options);
@@ -2590,6 +2638,109 @@ function unmount(component, options) {
   }
   return Promise.resolve();
 }
+function asClassComponent$1(component) {
+  return class extends Svelte4Component {
+    /** @param {any} options */
+    constructor(options) {
+      super({
+        component,
+        ...options
+      });
+    }
+  };
+}
+class Svelte4Component {
+  /** @type {any} */
+  #events;
+  /** @type {Record<string, any>} */
+  #instance;
+  /**
+   * @param {ComponentConstructorOptions & {
+   *  component: any;
+   * }} options
+   */
+  constructor(options) {
+    var sources = /* @__PURE__ */ new Map();
+    var add_source = (key, value) => {
+      var s = /* @__PURE__ */ mutable_source(value, false, false);
+      sources.set(key, s);
+      return s;
+    };
+    const props = new Proxy(
+      { ...options.props || {}, $$events: {} },
+      {
+        get(target, prop) {
+          return get(sources.get(prop) ?? add_source(prop, Reflect.get(target, prop)));
+        },
+        has(target, prop) {
+          if (prop === LEGACY_PROPS) return true;
+          get(sources.get(prop) ?? add_source(prop, Reflect.get(target, prop)));
+          return Reflect.has(target, prop);
+        },
+        set(target, prop, value) {
+          set(sources.get(prop) ?? add_source(prop, value), value);
+          return Reflect.set(target, prop, value);
+        }
+      }
+    );
+    this.#instance = (options.hydrate ? hydrate : mount)(options.component, {
+      target: options.target,
+      anchor: options.anchor,
+      props,
+      context: options.context,
+      intro: options.intro ?? false,
+      recover: options.recover,
+      transformError: options.transformError
+    });
+    if (!options?.props?.$$host || options.sync === false) {
+      flushSync();
+    }
+    this.#events = props.$$events;
+    for (const key of Object.keys(this.#instance)) {
+      if (key === "$set" || key === "$destroy" || key === "$on") continue;
+      define_property(this, key, {
+        get() {
+          return this.#instance[key];
+        },
+        /** @param {any} value */
+        set(value) {
+          this.#instance[key] = value;
+        },
+        enumerable: true
+      });
+    }
+    this.#instance.$set = /** @param {Record<string, any>} next */
+    (next2) => {
+      Object.assign(props, next2);
+    };
+    this.#instance.$destroy = () => {
+      unmount(this.#instance);
+    };
+  }
+  /** @param {Record<string, any>} props */
+  $set(props) {
+    this.#instance.$set(props);
+  }
+  /**
+   * @param {string} event
+   * @param {(...args: any[]) => any} callback
+   * @returns {any}
+   */
+  $on(event, callback) {
+    this.#events[event] = this.#events[event] || [];
+    const cb = (...args) => callback.call(this, ...args);
+    this.#events[event].push(cb);
+    return () => {
+      this.#events[event] = this.#events[event].filter(
+        /** @param {any} fn */
+        (fn) => fn !== cb
+      );
+    };
+  }
+  $destroy() {
+    this.#instance.$destroy();
+  }
+}
 const ATTR_REGEX = /[&"<]/g;
 const CONTENT_REGEX = /[&<]/g;
 function escape_html(value, is_attr) {
@@ -2746,123 +2897,6 @@ function to_style(value, styles) {
     return new_style === "" ? null : new_style;
   }
   return value == null ? null : String(value);
-}
-function asClassComponent$1(component) {
-  return class extends Svelte4Component {
-    /** @param {any} options */
-    constructor(options) {
-      super({
-        component,
-        ...options
-      });
-    }
-  };
-}
-class Svelte4Component {
-  /** @type {any} */
-  #events;
-  /** @type {Record<string, any>} */
-  #instance;
-  /**
-   * @param {ComponentConstructorOptions & {
-   *  component: any;
-   * }} options
-   */
-  constructor(options) {
-    var sources = /* @__PURE__ */ new Map();
-    var add_source = (key, value) => {
-      var s = /* @__PURE__ */ mutable_source(value, false, false);
-      sources.set(key, s);
-      return s;
-    };
-    const props = new Proxy(
-      { ...options.props || {}, $$events: {} },
-      {
-        get(target, prop) {
-          return get(sources.get(prop) ?? add_source(prop, Reflect.get(target, prop)));
-        },
-        has(target, prop) {
-          if (prop === LEGACY_PROPS) return true;
-          get(sources.get(prop) ?? add_source(prop, Reflect.get(target, prop)));
-          return Reflect.has(target, prop);
-        },
-        set(target, prop, value) {
-          set(sources.get(prop) ?? add_source(prop, value), value);
-          return Reflect.set(target, prop, value);
-        }
-      }
-    );
-    this.#instance = (options.hydrate ? hydrate : mount)(options.component, {
-      target: options.target,
-      anchor: options.anchor,
-      props,
-      context: options.context,
-      intro: options.intro ?? false,
-      recover: options.recover,
-      transformError: options.transformError
-    });
-    if (!options?.props?.$$host || options.sync === false) {
-      flushSync();
-    }
-    this.#events = props.$$events;
-    for (const key of Object.keys(this.#instance)) {
-      if (key === "$set" || key === "$destroy" || key === "$on") continue;
-      define_property(this, key, {
-        get() {
-          return this.#instance[key];
-        },
-        /** @param {any} value */
-        set(value) {
-          this.#instance[key] = value;
-        },
-        enumerable: true
-      });
-    }
-    this.#instance.$set = /** @param {Record<string, any>} next */
-    (next2) => {
-      Object.assign(props, next2);
-    };
-    this.#instance.$destroy = () => {
-      unmount(this.#instance);
-    };
-  }
-  /** @param {Record<string, any>} props */
-  $set(props) {
-    this.#instance.$set(props);
-  }
-  /**
-   * @param {string} event
-   * @param {(...args: any[]) => any} callback
-   * @returns {any}
-   */
-  $on(event, callback) {
-    this.#events[event] = this.#events[event] || [];
-    const cb = (...args) => callback.call(this, ...args);
-    this.#events[event].push(cb);
-    return () => {
-      this.#events[event] = this.#events[event].filter(
-        /** @param {any} fn */
-        (fn) => fn !== cb
-      );
-    };
-  }
-  $destroy() {
-    this.#instance.$destroy();
-  }
-}
-function subscribe_to_store(store, run, invalidate) {
-  if (store == null) {
-    run(void 0);
-    return noop;
-  }
-  const unsub = untrack(
-    () => store.subscribe(
-      run,
-      // @ts-expect-error
-      invalidate
-    )
-  );
-  return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }
 const BLOCK_OPEN = `<!--${HYDRATION_START}-->`;
 const BLOCK_CLOSE = `<!--${HYDRATION_END}-->`;

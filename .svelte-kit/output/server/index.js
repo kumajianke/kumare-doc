@@ -1509,7 +1509,8 @@ async function render_response({
   event_state,
   resolve_opts,
   action_result,
-  data_serializer
+  data_serializer,
+  error_components
 }) {
   if (state.prerendering) {
     if (options2.csp.mode === "nonce") {
@@ -1562,6 +1563,12 @@ async function render_response({
       ),
       form: form_value
     };
+    if (error_components) {
+      if (error2) {
+        props.error = error2;
+      }
+      props.errors = error_components;
+    }
     let data2 = {};
     for (let i = 0; i < branch.length; i += 1) {
       data2 = { ...data2, ...branch[i].data };
@@ -1589,7 +1596,16 @@ async function render_response({
           }
         ]
       ]),
-      csp: csp.script_needs_nonce ? { nonce: csp.nonce } : { hash: csp.script_needs_hash }
+      csp: csp.script_needs_nonce ? { nonce: csp.nonce } : { hash: csp.script_needs_hash },
+      transformError: error_components ? (
+        /** @param {unknown} e */
+        async (e) => {
+          const transformed2 = await handle_error_and_jsonify(event, event_state, options2, e);
+          props.page.error = props.error = error2 = transformed2;
+          props.page.status = status = get_status(e);
+          return transformed2;
+        }
+      ) : void 0
     };
     const fetch2 = globalThis.fetch;
     try {
@@ -1797,7 +1813,33 @@ ${indent}}`);
       for (const [info, cache] of remote_cache) {
         if (!info.id) continue;
         for (const key2 in cache) {
-          remote[create_remote_key(info.id, key2)] = await cache[key2];
+          const remote_key = create_remote_key(info.id, key2);
+          if (event_state.refreshes?.[remote_key] !== void 0) {
+            remote[remote_key] = await cache[key2];
+          } else {
+            const result = await Promise.race([
+              Promise.resolve(cache[key2]).then(
+                (v) => (
+                  /** @type {const} */
+                  { settled: true, value: v }
+                ),
+                (e) => (
+                  /** @type {const} */
+                  { settled: true, error: e }
+                )
+              ),
+              new Promise((resolve2) => {
+                queueMicrotask(() => resolve2(
+                  /** @type {const} */
+                  { settled: false }
+                ));
+              })
+            ]);
+            if (result.settled) {
+              if ("error" in result) throw result.error;
+              remote[remote_key] = result.value;
+            }
+          }
         }
       }
       const replacer = (thing) => {
@@ -2147,6 +2189,7 @@ async function respond_with_error({
       status,
       error: await handle_error_and_jsonify(event, event_state, options2, error2),
       branch,
+      error_components: [],
       fetched,
       event,
       event_state,
@@ -2587,6 +2630,11 @@ async function render_page(event, event_state, page, options2, manifest, state, 
               data_serializer.set_max_nodes(j + 1);
               const layouts = compact(branch.slice(0, j + 1));
               const nodes2 = new PageNodes(layouts.map((layout) => layout.node));
+              const error_branch = layouts.concat({
+                node: node2,
+                data: null,
+                server_data: null
+              });
               return await render_response({
                 event,
                 event_state,
@@ -2600,11 +2648,14 @@ async function render_page(event, event_state, page, options2, manifest, state, 
                 },
                 status: status2,
                 error: error2,
-                branch: layouts.concat({
-                  node: node2,
-                  data: null,
-                  server_data: null
-                }),
+                error_components: await load_error_components(
+                  options2,
+                  ssr,
+                  error_branch,
+                  page,
+                  manifest
+                ),
+                branch: error_branch,
                 fetched,
                 data_serializer
               });
@@ -2641,10 +2692,11 @@ async function render_page(event, event_state, page, options2, manifest, state, 
       },
       status,
       error: null,
-      branch: ssr === false ? [] : compact(branch),
+      branch: !ssr ? [] : compact(branch),
       action_result,
       fetched,
-      data_serializer: ssr === false ? server_data_serializer(event, event_state, options2) : data_serializer
+      data_serializer: !ssr ? server_data_serializer(event, event_state, options2) : data_serializer,
+      error_components: await load_error_components(options2, ssr, branch, page, manifest)
     });
   } catch (e) {
     if (e instanceof Redirect) {
@@ -2661,6 +2713,26 @@ async function render_page(event, event_state, page, options2, manifest, state, 
       resolve_opts
     });
   }
+}
+async function load_error_components(options2, ssr, branch, page, manifest) {
+  let error_components;
+  if (options2.server_error_boundaries && ssr) {
+    let last_idx = -1;
+    error_components = await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/await-thenable
+      branch.map((b, i) => {
+        if (i === 0) return void 0;
+        if (!b) return null;
+        i--;
+        while (i > last_idx + 1 && page.errors[i] === void 0) i -= 1;
+        last_idx = i;
+        const idx = page.errors[i];
+        if (idx == null) return void 0;
+        return manifest._.nodes[idx]?.().then((e) => e.component?.()).catch(() => void 0);
+      }).filter((e) => e !== null)
+    );
+  }
+  return error_components;
 }
 function once(fn) {
   let done = false;

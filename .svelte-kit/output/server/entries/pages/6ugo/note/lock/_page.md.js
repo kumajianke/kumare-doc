@@ -8,7 +8,7 @@ import "../../../../../chunks/root.js";
 function _page_md($$renderer) {
   const fm = {
     "pageType": "md",
-    "lastUpdate": "2026/03/11 17:01:14",
+    "lastUpdate": "2026/03/14 20:13:26",
     "anchors": [
       { "slugId": "锁的类型", "title": "锁的类型", "depth": 2 },
       { "slugId": "乐观锁", "title": "乐观锁", "depth": 3 },

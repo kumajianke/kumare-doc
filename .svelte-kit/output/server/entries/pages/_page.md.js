@@ -7,7 +7,7 @@ import "../../chunks/root.js";
 function _page_md($$renderer) {
   const fm = {
     "pageType": "md",
-    "lastUpdate": "2026/03/09 16:55:19",
+    "lastUpdate": "2026/03/14 20:13:26",
     "anchors": [],
     "title": "6ugo-document",
     "heroImage": "/sveltepress@3x.png",
@@ -22,7 +22,7 @@ function _page_md($$renderer) {
       {
         "label": "开始了解",
         "type": "secondary",
-        "to": "/rule",
+        "to": "./rule",
         "external": true
       }
     ],

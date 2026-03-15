@@ -26,6 +26,8 @@ export {};
 
 
 declare module "$app/types" {
+	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
+
 	export interface AppTypes {
 		RouteId(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note" | "/6ugo/note/lock" | "/6ugo/note/sklearn" | "/6ugo/note/sklearn/KNN" | "/6ugo/users" | "/rule" | "/rule/elysia";
 		RouteParams(): {
@@ -47,6 +49,6 @@ declare module "$app/types" {
 		};
 		Pathname(): "/" | "/6ugo" | "/6ugo/admin" | "/6ugo/card" | "/6ugo/community" | "/6ugo/note/lock" | "/6ugo/note/sklearn" | "/6ugo/note/sklearn/KNN" | "/6ugo/users" | "/rule" | "/rule/elysia";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
-		Asset(): "/sveltepress.svg" | "/sveltepress@3x.png" | string & {};
+		Asset(): "/search.json" | "/sveltepress.svg" | "/sveltepress@3x.png" | string & {};
 	}
 }

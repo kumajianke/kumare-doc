@@ -7,7 +7,7 @@ function html(value) {
   var open = "<!---->";
   return open + html2 + "<!---->";
 }
-const themeOptions = { "sidebar": { "/": [{ "title": "🏠 主页", "to": "/" }, { "title": "规范", "items": [{ "title": "总览", "to": "/rule" }, { "title": "Elysia", "to": "/rule/elysia" }] }, { "title": "牛邮裹", "items": [{ "title": "user应用", "to": "/6ugo/users" }, { "title": "admin应用", "to": "/6ugo/admin" }, { "title": "社区应用", "to": "/6ugo/community" }, { "title": "卡号应用", "to": "/6ugo/card" }] }, { "title": "技术文档", "items": [{ "title": "锁", "to": "/6ugo/note/lock" }] }] }, "github": "https://github.com/Blackman99/sveltepress", "logo": "/sveltepress.svg" };
+const themeOptions = { "sidebar": { "/": [{ "title": "🏠 主页", "to": "/" }, { "title": "规范", "items": [{ "title": "总览", "to": "/rule" }, { "title": "Elysia", "to": "/rule/elysia" }] }, { "title": "牛邮裹文档", "items": [{ "title": "user应用", "to": "/6ugo/users" }, { "title": "admin应用", "to": "/6ugo/admin" }, { "title": "社区应用", "to": "/6ugo/community" }, { "title": "卡号应用", "to": "/6ugo/card" }] }, { "title": "技术文档", "items": [{ "title": "锁", "to": "/6ugo/note/lock" }] }, { "title": "笔记", "items": [{ "title": "快速学习", "items": [{ "title": "KNN", "to": "/6ugo/note/sklearn/KNN" }] }] }] }, "github": "https://github.com/Blackman99/sveltepress", "logo": "/sveltepress.svg" };
 function External($$renderer, $$props) {
   const { $$slots, $$events, ...rest } = $$props;
   $$renderer.push(`<svg${attributes({ ...rest, width: "1em", height: "1em", viewBox: "0 0 24 24" }, void 0, void 0, void 0, 3)}><g fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"><path strokeDasharray="36" strokeDashoffset="36" d="M12 5C8.13401 5 5 8.13401 5 12C5 15.866 8.13401 19 12 19C15.866 19 19 15.866 19 12"><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="36;0"></animate></path><path strokeDasharray="12" strokeDashoffset="12" d="M13 11L20 4"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.6s" dur="0.3s" values="12;0"></animate></path><path strokeDasharray="8" strokeDashoffset="8" d="M21 3H15M21 3V9"><animate fill="freeze" attributeName="stroke-dashoffset" begin="0.9s" dur="0.2s" values="8;0"></animate></path></g></svg>`);
@@ -25,7 +25,9 @@ function parseImageSrc(src) {
   return getPathFromBase(src);
 }
 function isLinkActive(link, routeId) {
-  return link === routeId || (link === null || link === void 0 ? void 0 : link.startsWith("".concat(routeId, "/")));
+  var normalizedLink = (link === null || link === void 0 ? void 0 : link.replace(/\/$/, "")) || "";
+  var normalizedRouteId = (routeId === null || routeId === void 0 ? void 0 : routeId.replace(/\/$/, "")) || "";
+  return normalizedLink === normalizedRouteId || (link === null || link === void 0 ? void 0 : link.startsWith("".concat(normalizedRouteId, "/")));
 }
 var __spreadArray = function(to, from, pack) {
   if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
@@ -84,11 +86,15 @@ function resolveSidebar(routeId) {
   var _a;
   if (!routeId)
     return;
+  var normalizedRouteId = routeId.replace(/\/$/, "");
   var key = Object.keys(themeOptions.sidebar || {}).find(function(key2) {
-    return routeId.startsWith(key2);
+    return normalizedRouteId.startsWith(key2.replace(/\/$/, ""));
   });
-  if (key)
-    resolvedSidebar.set(((_a = themeOptions.sidebar) === null || _a === void 0 ? void 0 : _a[key]) || []);
+  if (!key) {
+    resolvedSidebar.set([]);
+    return;
+  }
+  resolvedSidebar.set(((_a = themeOptions.sidebar) === null || _a === void 0 ? void 0 : _a[key]) || []);
 }
 const siteConfig = { "title": "牛邮裹 后端开发文档", "description": "@ 基于`库码内部参考代码规范文档`" };
 export {

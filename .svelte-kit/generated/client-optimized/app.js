@@ -11,7 +11,9 @@ export const nodes = [
 	() => import('./nodes/7'),
 	() => import('./nodes/8'),
 	() => import('./nodes/9'),
-	() => import('./nodes/10')
+	() => import('./nodes/10'),
+	() => import('./nodes/11'),
+	() => import('./nodes/12')
 ];
 
 export const server_loads = [];
@@ -23,9 +25,11 @@ export const dictionary = {
 		"/6ugo/card": [5],
 		"/6ugo/community": [6],
 		"/6ugo/note/lock": [7],
-		"/6ugo/users": [8],
-		"/rule": [9],
-		"/rule/elysia": [10]
+		"/6ugo/note/sklearn": [8],
+		"/6ugo/note/sklearn/KNN": [9],
+		"/6ugo/users": [10],
+		"/rule": [11],
+		"/rule/elysia": [12]
 	};
 
 export const hooks = {

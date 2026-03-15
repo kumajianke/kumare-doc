@@ -2,7 +2,7 @@
 
 export const index = 9;
 let component_cache;
-export const component = async () => component_cache ??= (await import('../entries/pages/rule/_page.md.js')).default;
-export const imports = ["_app/immutable/nodes/9.xbvRJRMy.js","_app/immutable/chunks/DsnmJJEf.js","_app/immutable/chunks/CwUzUFgs.js","_app/immutable/chunks/DX4foA5W.js","_app/immutable/chunks/C1L0hoeX.js","_app/immutable/chunks/Cf3cDvQB.js","_app/immutable/chunks/CpnvmI1U.js","_app/immutable/chunks/CuAbifRY.js"];
+export const component = async () => component_cache ??= (await import('../entries/pages/6ugo/note/sklearn/KNN/_page.md.js')).default;
+export const imports = ["_app/immutable/nodes/9.D4tHniOc.js","_app/immutable/chunks/DsnmJJEf.js","_app/immutable/chunks/CN9v3Yxe.js","_app/immutable/chunks/Cz6VWaJK.js","_app/immutable/chunks/D0LP9oYd.js","_app/immutable/chunks/DH1JmU4W.js","_app/immutable/chunks/Df2ORK52.js","_app/immutable/chunks/NS4aRjWX.js"];
 export const stylesheets = ["_app/immutable/assets/Expansion.DZaGfx6o.css","_app/immutable/assets/TabPanel.CARuHYhi.css"];
 export const fonts = [];
