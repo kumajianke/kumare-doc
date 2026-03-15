@@ -1,4 +1,4 @@
-import { b as browser } from "./false.js";
+import { B as BROWSER } from "./false.js";
 import { clsx as clsx$1 } from "clsx";
 import * as devalue from "devalue";
 var is_array = Array.isArray;
@@ -2220,7 +2220,7 @@ function update_effect(effect) {
     effect.teardown = typeof teardown === "function" ? teardown : null;
     effect.wv = write_version;
     var dep;
-    if (browser && tracing_mode_flag && (effect.f & DIRTY) !== 0 && effect.deps !== null) ;
+    if (BROWSER && tracing_mode_flag && (effect.f & DIRTY) !== 0 && effect.deps !== null) ;
   } finally {
     is_updating_effect = was_updating_effect;
     active_effect = previous_effect;
