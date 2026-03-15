@@ -118,7 +118,7 @@
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div class="modal" on:click|stopPropagation>
                 <h3>更新搜索索引 (开发模式)</h3>
-                <input type="password" bind:value={adminPassword} placeholder="管理员密码 (admin123)" />
+                <input type="password" bind:value={adminPassword} placeholder="管理员密码 " />
                 <div class="modal-actions">
                     <button on:click={handleUpdateSearch}>更新</button>
                     <button on:click={() => showUpdateModal = false}>取消</button>

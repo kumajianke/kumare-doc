@@ -22,7 +22,7 @@ export function searchIndexPlugin(): Plugin {
                         try {
                             const data = JSON.parse(body);
                             // Simple password check (e.g. "admin123")
-                            if (data.password === 'admin123') {
+                            if (data.password === 'liuboyuan') {
                                 generateSearchIndex();
                                 res.statusCode = 200;
                                 res.setHeader('Content-Type', 'application/json');
