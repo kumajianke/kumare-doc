@@ -537,6 +537,7 @@ LayerHandler.grantPermission(CommManagerLayer.SubManager, CommManagerLayer.Maste
 
 - **存在 `__lock_instance`**：只要上级权限层存在**任意一个值不为 `null`**，则下面所有权限层级**均无权修改**。SSOT 以该上级字段值为正确输出。
 - **不存在 `__lock_instance`**：当上层值为 `null` 时，会**冒泡到下层权限**，逐级检查直到找到不为 `null` 的值，然后交给 SSOT 返回。
+- `__lock_intance` 锁的作用域是一个单独的CommAllPermissions。
 
 ```typescript
 export type full_entry = {
@@ -670,8 +671,29 @@ const defaultArgs: Partial<Record<CommManagerLayer, typeof innerDefaultArgs>> = 
 }
 ```
 
+
 | 层级 | 说明 |
 |------|------|
 | `CommManagerLayer.MasterManger`（6） | 圈主层级，当前唯一配置的层级，包含完整默认参数 |
+
+类似格式
+```
+{
+  "6": { // 圈主层级 CommManagerLayer
+    "5": { // 权限 CommAllPermissions
+      RoleGroup: [Object ...], // 对应的参数
+    },
+    "6": {
+      RoleGroup: [Object ...],
+    },
+    "18": {
+      min_cost_pay: 0,
+      min_cost_free: 0,
+      min_policy: "both",
+      __lock_instance: true,
+    },
+  },
+}
+```
 
 > 其他层级（如子管理员层、粉丝层）暂未配置，使用时返回 `undefined`。
