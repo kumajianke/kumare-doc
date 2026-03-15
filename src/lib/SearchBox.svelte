@@ -15,6 +15,7 @@
     let showSearchModal = false; // Controls the main search modal
     let updateStatus = '';
     let searchInput; // Reference for auto-focus
+    let selectedIndex = -1; // For keyboard navigation
 
     onMount(async () => {
         try {
@@ -42,16 +43,52 @@
             e.preventDefault();
             showSearchModal = true;
         }
-        // Esc to close
-        if (e.key === 'Escape') {
-            if (showUpdateModal) showUpdateModal = false;
-            else if (showSearchModal) showSearchModal = false;
+        
+        if (showSearchModal) {
+            // Esc to close
+            if (e.key === 'Escape') {
+                if (showUpdateModal) showUpdateModal = false;
+                else showSearchModal = false;
+            }
+            // Arrow Up
+            else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (searchResults.length > 0) {
+                    selectedIndex = (selectedIndex - 1 + searchResults.length) % searchResults.length;
+                    scrollToSelected();
+                }
+            }
+            // Arrow Down
+            else if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (searchResults.length > 0) {
+                    selectedIndex = (selectedIndex + 1) % searchResults.length;
+                    scrollToSelected();
+                }
+            }
+            // Enter
+            else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
+                    const result = searchResults[selectedIndex];
+                    closeSearch();
+                    goto(`${base}${result.url === '/' && base ? '' : result.url}`);
+                }
+            }
+        }
+    }
+
+    function scrollToSelected() {
+        const el = document.getElementById(`result-item-${selectedIndex}`);
+        if (el) {
+            el.scrollIntoView({ block: 'nearest' });
         }
     }
 
     $: if (showSearchModal && searchInput) {
         // Auto focus input when modal opens
         setTimeout(() => searchInput.focus(), 50);
+        selectedIndex = -1; // Reset selection
     }
 
     function handleSearch() {
@@ -59,12 +96,14 @@
         if (!searchQuery.trim() || !minisearch) {
             searchResults = [];
             showResults = false;
+            selectedIndex = -1;
             return;
         }
         
         const results = minisearch.search(searchQuery);
         searchResults = results.slice(0, 10);
         showResults = true;
+        selectedIndex = 0; // Select first result by default
     }
 
     function closeSearch() {
@@ -135,8 +174,12 @@
             <div class="search-body">
                 {#if searchQuery && searchResults.length > 0}
                     <div class="results-list">
-                        {#each searchResults as result}
-                            <a href="{base}{result.url === '/' && base ? '' : result.url}" class="result-item" on:click={() => {
+                        {#each searchResults as result, index}
+                            <a href="{base}{result.url === '/' && base ? '' : result.url}" 
+                               class="result-item {index === selectedIndex ? 'selected' : ''}" 
+                               id="result-item-{index}"
+                               on:mouseenter={() => selectedIndex = index}
+                               on:click={() => {
                                 closeSearch();
                                 // goto handles client-side navigation if possible
                                 goto(`${base}${result.url === '/' && base ? '' : result.url}`);
@@ -352,9 +395,13 @@
         text-decoration: none;
         color: var(--sb-text);
         margin-bottom: 4px;
+        transition: all 0.1s;
+        border-left: 3px solid transparent;
     }
-    .result-item:hover {
+    .result-item:hover, .result-item.selected {
         background: var(--sb-item-hover);
+        border-left: 3px solid var(--sb-accent);
+        padding-left: 9px; /* adjust for border */
     }
     .result-title {
         display: flex;
