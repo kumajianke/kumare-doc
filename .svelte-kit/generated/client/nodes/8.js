@@ -1,1 +1,1 @@
-export { default as component } from "../../../../src/routes/6ugo/note/sklearn/+page.md";
+export { default as component } from "../../../../src/routes/6ugo/note/lock/+page.md";

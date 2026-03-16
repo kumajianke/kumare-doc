@@ -1,1 +1,1 @@
-export { default as component } from "../../../../src/routes/rule/elysia/+page.md";
+export { default as component } from "../../../../src/routes/rule/+page.md";

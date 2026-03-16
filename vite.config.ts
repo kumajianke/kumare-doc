@@ -43,6 +43,9 @@ const config = defineConfig({
 						}, {
 							title: "卡号应用",
 							to: "/6ugo/card"
+						}, {
+							title: "机制介绍",
+							to: "/6ugo/mechanism"
 						}]
 					}, {
 						title: "技术文档",
