@@ -231,6 +231,7 @@
 | [validate_manager_auth](#validate_manager_auth) | `function` | 验证用户是否拥有指定权限 |
 | [can_grant_permission](#can_grant_permission) | `function` | 验证用户是否可向下层授予权限 |
 | [full_entry / \_\_lock\_instance](#full_entry--__lock_instance) | `type` | SSOT 互斥锁定标记（`WIP`） |
+| [RoleArgReader](#roleargreader) | `class` | SSOT 权限参数阅读器，按层级优先级提取参数值 |
 | [sharedRoleGroup](#sharedrolegroup) | `interface` | 角色分组泛型基础类型 |
 | [CreatePayMessageArgs](#createpaymessageargs) | `type` | 创建付费消息的各角色积分配置 |
 | [CreateFreeColumnArgs](#createfreecolumnargs) | `type` | 创建免费专栏的各角色限制配置 |
@@ -559,6 +560,101 @@ export type setPayUserMinValueArgs = full_entry & {
 
 ---
 
+### RoleArgReader
+
+:::success[tips]
+权限参数阅读器，依据 **SSOT（唯一可靠来源）** 原则，从高权限层级向低权限层级逐层检索参数值。高层级设置的参数将覆盖低层级，确保权限裁决的一致性。
+:::
+
+> 文件路径：`src/apps/user/user_domains/shared/RoleArgReader.ts`
+
+**属性**
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| `permisses_arg` | `per_arg \| null` | 按管理层级组织的权限参数对象 |
+| `layer_solt` | `CommManagerLayer[]` | 层级排序数组（由 `LayerHandler.getLayerSolt()` 生成，从高到低排序） |
+
+**构造函数**
+
+```typescript
+constructor(per_arg: per_arg)
+```
+
+- `per_arg` : `per_arg` — 按管理层级组织的权限参数对象（类型为 `Partial<Record<CommManagerLayer, innerDefaultArgsType>>`）
+
+**方法**
+
+#### `reload(per_arg)`
+
+重新加载权限参数，支持链式调用。
+
+- `per_arg` : `per_arg` — 新的权限参数对象
+
+**返回** `this`（当前实例，用于链式编程）
+
+#### `getSsotPermissesValue(permisses_name, args_name?)`
+
+:::warning[核心方法]
+**获取唯一可靠源信息**。按照 `layer_solt` 从高到低逐层检索指定权限的参数值，实现 SSOT 层级覆盖逻辑。
+:::
+
+**参数**
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `permisses_name` | `CommAllPermissions` | — | 要查询的权限枚举值 |
+| `args_name` | `string` | `"default"` | 参数路径，支持点号分隔的嵌套路径（如 `"RoleGroup.guest_value.cost_create_pay"`） |
+
+**返回值**
+
+```typescript
+{
+  value: any | null,         // 对应参数的值，未找到则为 null
+  permisses_rela: object,    // 该权限在命中层级中的完整参数对象
+  layer: CommManagerLayer     // 命中的权限层级
+}
+```
+
+> 若所有层级均未配置该权限参数，返回 `{ layer: 0, permisses_arg: null, value: null }`。
+
+**查询逻辑**
+
+1. 从最高管理层级开始向低层级逐层扫描
+2. 跳过不存在的层级或未配置目标权限的层级
+3. 对每一层级判断 `__lock_instance` 互斥锁：
+   - **存在 `__lock_instance`**：检查该层所有字段是否均为 `null`
+     - 若存在**任意非 `null` 值** → 互斥成立，**立即返回**该层级的值（即使目标字段本身为 `null`）
+     - 若**全部为 `null`** → 允许向下冒泡，继续检查低层级
+   - **不存在 `__lock_instance`**：当前层的目标值不为 `null` 时直接返回
+4. 若所有层级均未命中，返回兜底空值
+
+**示例**
+
+```typescript
+import { RoleArgReader } from "./shared/RoleArgReader";
+import { CommAllPermissions } from "./shared/AllPermisses";
+
+// 使用圈主权限参数初始化
+const reader = new RoleArgReader(masterManager.permission_args);
+
+// 查询付费消息权限中来宾角色的付费创建积分
+const result = reader.getSsotPermissesValue(
+  CommAllPermissions.CreatePayMessage,
+  "RoleGroup.guest_value.cost_create_pay"
+);
+console.log(result.value);  // 对应积分值或 null
+console.log(result.layer);  // 命中的管理层级
+
+// 链式重载后再次查询
+reader.reload(newArgs).getSsotPermissesValue(
+  CommAllPermissions.SetPayUserMinValue,
+  "min_cost_pay"
+);
+```
+
+---
+
 ### sharedRoleGroup
 
 角色分组泛型基础接口，为每种身份定义独立的参数值。所有权限参数类型均基于此结构扩展。
@@ -667,33 +763,38 @@ const innerDefaultArgs = {
 
 ```typescript
 const defaultArgs: Partial<Record<CommManagerLayer, typeof innerDefaultArgs>> = {
-  [CommManagerLayer.MasterManger]: innerDefaultArgs
+  [CommManagerLayer.MasterManger]: innerDefaultArgs,
+  [CommManagerLayer.SubManager]: { ...innerDefaultArgs, /* 部分覆盖 */ }
 }
 ```
 
 
 | 层级 | 说明 |
 |------|------|
-| `CommManagerLayer.MasterManger`（6） | 圈主层级，当前唯一配置的层级，包含完整默认参数 |
+| `CommManagerLayer.MasterManger`（6） | 圈主层级，包含完整默认参数 |
+| `CommManagerLayer.SubManager`（4） | 子管理员层级，继承圈主默认参数并覆盖部分值 |
+
+**子管理员层级覆盖项**
+
+| 权限 Key | 覆盖字段 | 值 |
+|----------|----------|----|
+| `CreatePayMessage`（6） | `RoleGroup.guest_value.cost_create_pay` | `13` |
+| `SetPayUserMinValue`（18） | `min_cost_pay` | `1000`（测试用途） |
 
 类似格式
 ```
 {
   "6": { // 圈主层级 CommManagerLayer
-    "5": { // 权限 CommAllPermissions
-      RoleGroup: [Object ...], // 对应的参数
-    },
-    "6": {
-      RoleGroup: [Object ...],
-    },
-    "18": {
-      min_cost_pay: 0,
-      min_cost_free: 0,
-      min_policy: "both",
-      __lock_instance: true,
-    },
+    "5": { RoleGroup: [Object ...] },
+    "6": { RoleGroup: [Object ...] },
+    "18": { min_cost_pay: 0, min_cost_free: null, min_policy: "both", __lock_instance: true },
+  },
+  "4": { // 子管理员层级 CommManagerLayer
+    "5": { RoleGroup: [Object ...] },           // 继承自 innerDefaultArgs
+    "6": { RoleGroup: { guest_value: { cost_create_pay: 13, ... }, ... } },
+    "18": { min_cost_pay: 1000, min_cost_free: null, min_policy: "both", __lock_instance: true },
   },
 }
 ```
 
-> 其他层级（如子管理员层、粉丝层）暂未配置，使用时返回 `undefined`。
+> 其他层级（如粉丝层）暂未配置，使用时返回 `undefined`。
