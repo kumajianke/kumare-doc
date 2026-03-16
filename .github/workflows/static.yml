@@ -1,4 +1,4 @@
-# SveltePress 部署脚本
+# SveltePress 部署脚本 (使用 Bun)
 name: Deploy SveltePress to Pages
 
 on:
@@ -25,20 +25,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. 增加：配置 Node.js 环境
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # 1. 修改：配置 Bun 环境
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: 20 # 推荐使用较新的 Node 版本
-          cache: 'npm'     # 如果你用 pnpm 或 yarn，请修改这里
+          bun-version: latest # 这里默认使用最新版，也可以指定如 '1.1.0'
 
-      # 2. 增加：安装依赖
+      # 2. 修改：使用 bun 安装依赖
       - name: Install dependencies
-        run: npm ci        # 或者用 npm install, pnpm install
+        run: bun install
 
-      # 3. 增加：执行 SveltePress 打包
+      # 3. 修改：使用 bun 执行打包
       - name: Build project
-        run: npm run build # 或者用 pnpm build
+        run: bun run build
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -46,7 +45,9 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'dist/'
+          # 请确保使用 bun build 后的输出目录依然是 dist/
+          # 如果 SveltePress 配置了其他输出目录(例如 build/)，请将此处修改为对应的目录
+          path: 'dist/' 
 
       - name: Deploy to GitHub Pages
         id: deployment
