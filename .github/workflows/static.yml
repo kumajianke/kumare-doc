@@ -1,5 +1,5 @@
 # SveltePress 部署脚本 (使用 Bun)
-name: Deploy SveltePress to Pages
+name: Deploy SveltePress to Page
 
 on:
   push:
