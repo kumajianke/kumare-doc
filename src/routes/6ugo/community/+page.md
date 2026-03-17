@@ -433,31 +433,32 @@
 
 ### getUserRoleController
 :::success[tips]
-获取用户在社区中的角色（持久层查询）。在事务中依次判断：系统管理员 → 圈主 → 子管理员 → 粉丝用户层，并通过缓存查询用户与社区的关系记录。若用户未加入社区则返回空。
+获取用户在社区中的角色（持久层查询）。
+采用责任链模式依次判断：系统管理员 → 圈主 → 子管理员 → 粉丝用户层。
+内部自动处理积分策略判断（`resolveFansRole`）和管理员权限校验（`resolveManagerRole`）。
 :::
 
 **参数**
 - `cid` : `number` — 社区 ID
-- `user` : `InferSelectModel<typeof user_model>` — 用户对象
+- `user` : `UserRow` (InferSelectModel<typeof user_model>) — 用户对象
 
-**返回**
-- `comm_role` : `CommRole | null` — 角色枚举（未加入时为 `null`）
-- `comm_role_instance` : `roleBasic | null` — 权限实例对象（未加入时为 `null`）
+**返回** `Promise<UserRoleInCommResult>`
+- `comm_role` : `CommRole | null` — 角色枚举
+- `comm_role_instance` : `roleBasic | null` — 权限实例对象（包含 `validateManagerAuth` 等方法）
 
 ---
 
 ### getUserRoleControllerWithCache
 :::success[tips]
-获取用户在圈子中的身份（缓存优先）。先尝试命中 Redis 缓存（key: `user_role_in_comm:{uid},{cid}`），未命中则调用 `getUserRoleController` 查询持久层，并自动回填缓存。
+获取用户在圈子中的身份（缓存优先）。
+**优化策略**：Redis 仅缓存 `comm_role` 枚举值，命中缓存后通过工厂函数 `createRoleInstanceByCommRole` 实时重建权限实例，确保实例方法可用。
 :::
 
 **参数**
 - `cid` : `number` — 社区 ID
-- `user` : `InferSelectModel<typeof user_model>` — 用户对象
+- `user` : `UserRow` — 用户对象
 
-**返回**
-- `comm_role` : `CommRole | null` — 角色枚举
-- `comm_role_instance` : `roleBasic | null` — 权限实例对象
+**返回** 同 `getUserRoleController`
 
 ---
 
