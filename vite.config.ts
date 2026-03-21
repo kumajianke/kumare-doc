@@ -2,7 +2,7 @@ import { defaultTheme } from '@sveltepress/theme-default'
 import { sveltepress } from '@sveltepress/vite'
 import { defineConfig } from 'vite'
 import remarkMermaid from './src/lib/remark-mermaid.js'
-import { searchIndexPlugin } from './searchPlugin.ts'
+import { searchIndexPlugin } from './searchPlugin'
 
 const config = defineConfig({
 
@@ -46,6 +46,9 @@ const config = defineConfig({
 						}, {
 							title: "机制介绍",
 							to: "/6ugo/mechanism"
+						}, {
+							title: "需求分析",
+							to: "/6ugo/need"
 						}]
 					}, {
 						title: "技术文档",

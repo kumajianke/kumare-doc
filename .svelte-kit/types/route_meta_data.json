@@ -18,6 +18,9 @@
 	"/6ugo/mechanism": [
 		"src/routes/+layout.ts"
 	],
+	"/6ugo/need": [
+		"src/routes/+layout.ts"
+	],
 	"/6ugo/note/lock": [
 		"src/routes/+layout.ts"
 	],
