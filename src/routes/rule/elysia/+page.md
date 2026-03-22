@@ -100,8 +100,11 @@ Service 责任层 -> [-> Domain 领域层] -> Controller 控制层  -> [Decision
 
 #### 待实验
 - 所有主键设置为bigint mode设置为bigint 代码设置
-```
+
+```ts
 BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 ```
+
+- InferSelectModel 的内容放在 model.infer.ts 中
